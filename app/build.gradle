@@ -1,0 +1,21 @@
+plugins {
+    id 'com.android.application' version '8.13.2'
+}
+
+android {
+    namespace 'com.shanmei.tools.testing'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.shanmei.tools.testing'
+        minSdk 24
+        targetSdk 36
+        versionCode 7
+        versionName '0.1.6'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

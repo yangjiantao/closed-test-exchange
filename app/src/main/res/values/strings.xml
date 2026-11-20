@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">封测互测</string>
+    <string name="overlay_permission_required">请在系统设置中允许%1$s显示悬浮窗</string>
+</resources>
