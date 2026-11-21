@@ -1,6 +1,7 @@
 package com.shanmei.tools.testing;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
@@ -41,6 +42,27 @@ public class ReportImageTest {
     }
 
     @Test
+    public void reportDisplaysInstalledVersionsInBothGridWidths() {
+        Context context = localizedContext(Locale.US);
+        long now = System.currentTimeMillis();
+        for (int columns : new int[]{2, 3}) {
+            Bitmap withVersion = renderReport(context, now, columns, "1.0.0");
+            Bitmap missingVersion = renderReport(context, now, columns, null);
+            Bitmap longVersion = renderReport(context, now, columns, "2.4.15-beta.20261121-01234567890123456789");
+            try {
+                assertEquals(withVersion.getHeight(), missingVersion.getHeight());
+                assertEquals(withVersion.getHeight(), longVersion.getHeight());
+                assertFalse(withVersion.sameAs(missingVersion));
+                assertFalse(longVersion.sameAs(withVersion));
+            } finally {
+                withVersion.recycle();
+                missingVersion.recycle();
+                longVersion.recycle();
+            }
+        }
+    }
+
+    @Test
     public void reportCanBeSavedToPictures() throws Exception {
         assumeTrue(Build.VERSION.SDK_INT >= 29);
         Context context = localizedContext(Locale.US);
@@ -72,15 +94,20 @@ public class ReportImageTest {
 
     private String writeReport(Context context, long now) throws Exception {
         String name = ReportImage.name(now);
-        var app = new InstalledApps.App("example.checkin", "Sample app", context.getDrawable(R.drawable.app_icon), now);
-        var entry = new TestStore.Entry(app.packageName(), 1, now);
-        Bitmap report = ReportImage.render(context, Collections.singletonList(new ReportImage.Item(app, entry)), now, 3);
+        Bitmap report = renderReport(context, now, 3, "1.0.0");
         try {
             ReportImage.cache(context, report, name);
         } finally {
             report.recycle();
         }
         return name;
+    }
+
+    private Bitmap renderReport(Context context, long now, int columns, String versionName) {
+        var app = new InstalledApps.App("example.checkin", "Sample app",
+                context.getDrawable(R.drawable.app_icon), now, versionName);
+        var entry = new TestStore.Entry(app.packageName(), 1, now);
+        return ReportImage.render(context, Collections.singletonList(new ReportImage.Item(app, entry)), now, columns);
     }
 
     private void assertPng(Context context, Uri uri) throws Exception {

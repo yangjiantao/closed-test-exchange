@@ -44,6 +44,11 @@
     <string name="overlay_failed">无法显示悬浮窗，请检查系统权限</string>
     <string name="open_settings">前往设置</string>
     <string name="add_apps_first">请先向清单添加应用</string>
+    <string name="play_checking">正在检查 Google Play…</string>
+    <string name="play_unreachable">无法连接 Google Play</string>
+    <string name="play_retry_message">请检查网络后重试。</string>
+    <string name="play_retry">重试</string>
+    <string name="play_continue_anyway">仍然继续</string>
     <string name="report_title">打卡报告</string>
     <string name="report_open">分享打卡报告</string>
     <string name="report_date">%1$s · 本机记录</string>

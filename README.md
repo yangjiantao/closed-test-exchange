@@ -18,6 +18,8 @@ The interface and reports are available in English and Simplified Chinese. On An
 
 The app keeps your checklist, most recent launch time, and check-in day count on the device. The 14-day progress indicator counts local check-in days. Google Play tracks closed-test enrollment and feedback separately in Play Console. [Google Play closed testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465?hl=en)
 
+Before a manual launch or a batch, the app checks whether it can reach Google Play. If the check fails, you can retry, cancel, or continue anyway. The report shows each app's installed version at the time of export.
+
 Read the [privacy notice](PRIVACY.md) for permissions, exported reports, and how to clear your records.
 
 ## Screenshots
