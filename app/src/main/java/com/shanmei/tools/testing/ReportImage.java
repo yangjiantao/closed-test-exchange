@@ -32,7 +32,7 @@ final class ReportImage {
     private static final int MARGIN = 42;
     private static final int GAP = 20;
     private static final int GRID_TOP = 360;
-    private static final int TILE_HEIGHT = 254;
+    private static final int TILE_HEIGHT = 294;
 
     record Item(InstalledApps.App app, TestStore.Entry entry) {}
 
@@ -154,18 +154,27 @@ final class ReportImage {
         int center = x + width / 2;
         fill(canvas, paint, x, y, x + width, y + TILE_HEIGHT, 26, Ui.WHITE);
         drawIcon(canvas, item.app().icon(), center - 35, y + 19, 70);
-        drawName(canvas, paint, item.app().name(), x + 13, y + 99, width - 26);
+        String version = item.app().versionName();
+        version = version == null ? "" : version.trim();
+        paint.setTypeface(Typeface.DEFAULT);
+        paint.setTextSize(25);
+        paint.setTextAlign(Paint.Align.CENTER);
+        String versionLabel = TextUtils.ellipsize(version.isEmpty() ? "—" : version, paint,
+                width - 26, TextUtils.TruncateAt.END).toString();
+        draw(canvas, paint, versionLabel, center, y + 116, 25, Ui.MUTED, false);
+        paint.setTextAlign(Paint.Align.LEFT);
+        drawName(canvas, paint, item.app().name(), x + 13, y + 127, width - 26);
 
         boolean opened = item.entry().openedOn(now);
         int color = opened ? Ui.GREEN : Ui.AMBER;
         String status = context.getString(opened ? R.string.checked_in : R.string.pending_check_in);
-        fill(canvas, paint, center - 91, y + 173, center + 91, y + 212, 10,
+        fill(canvas, paint, center - 91, y + 213, center + 91, y + 252, 10,
                 opened ? Ui.PALE : Ui.PALE_AMBER);
         paint.setTextAlign(Paint.Align.CENTER);
-        draw(canvas, paint, status, center, y + 202, 29, color, true, 162);
+        draw(canvas, paint, status, center, y + 242, 29, color, true, 162);
         int days = item.entry().days();
         String total = context.getResources().getQuantityString(R.plurals.report_days, days, days);
-        draw(canvas, paint, total, center, y + 240, 30, Ui.GREEN, true, width - 26);
+        draw(canvas, paint, total, center, y + 280, 30, Ui.GREEN, true, width - 26);
         paint.setTextAlign(Paint.Align.LEFT);
     }
 

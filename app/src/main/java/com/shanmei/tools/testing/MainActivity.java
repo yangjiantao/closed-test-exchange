@@ -10,10 +10,13 @@ import android.content.ClipData;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
+import android.graphics.Typeface;
 import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.Gravity;
@@ -34,6 +37,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 public final class MainActivity extends Activity {
@@ -55,12 +59,18 @@ public final class MainActivity extends Activity {
     }
 
     private final ExecutorService reports = Executors.newSingleThreadExecutor();
+    private final ExecutorService playChecks = Executors.newFixedThreadPool(2);
+    private final Handler playCheckEvents = new Handler(Looper.getMainLooper());
 
     private Page page = Page.APPS;
     private Sort sort = Sort.PACKAGE;
     private List<InstalledApps.App> catalog = java.util.Collections.emptyList();
     private TestStore store;
     private ScrollView scroll;
+    private TextView playCheckStatus;
+    private Future<?> playCheck;
+    private AlertDialog playWarning;
+    private int playCheckId;
     private String pendingReport;
     private boolean autoPermissionRequested;
     private boolean exporting;
@@ -102,8 +112,16 @@ public final class MainActivity extends Activity {
     }
 
     @Override
+    protected void onPause() {
+        cancelPlayCheck();
+        if (playWarning != null) playWarning.dismiss();
+        super.onPause();
+    }
+
+    @Override
     protected void onDestroy() {
         reports.shutdown();
+        playChecks.shutdownNow();
         super.onDestroy();
     }
 
@@ -126,6 +144,7 @@ public final class MainActivity extends Activity {
 
     private void navigate(Page target) {
         if (page == target) return;
+        cancelPlayCheck();
         page = target;
         if (page == Page.APPS) catalog = InstalledApps.scan(this);
         render(false);
@@ -133,6 +152,7 @@ public final class MainActivity extends Activity {
 
     private void render(boolean keepPosition) {
         int previousOffset = keepPosition && scroll != null ? scroll.getScrollY() : 0;
+        playCheckStatus = null;
         LinearLayout root = column(this);
         root.setBackgroundColor(PAPER);
         root.setFocusableInTouchMode(true);
@@ -292,6 +312,10 @@ public final class MainActivity extends Activity {
         int sequenceLabel = AutoTestService.running ? R.string.sequence_running : R.string.open_in_order;
         addAction(toolbar, getString(sequenceLabel), true, this::requestAutoTest);
         append(body, toolbar, 10);
+        playCheckStatus = text(this, getString(R.string.play_checking), 12, MUTED, false);
+        playCheckStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        playCheckStatus.setVisibility(playCheck == null ? View.GONE : View.VISIBLE);
+        append(body, playCheckStatus, 5);
         renderTestGrid(body, tests, now);
         return true;
     }
@@ -332,9 +356,11 @@ public final class MainActivity extends Activity {
     }
 
     private void openTest(InstalledApps.App app) {
-        if (!InstalledApps.openAndRecord(this, app.packageName())) {
-            toast(getString(R.string.open_app_failed, app.name()));
-        }
+        checkGooglePlay(() -> {
+            if (!InstalledApps.openAndRecord(this, app.packageName())) {
+                toast(getString(R.string.open_app_failed, app.name()));
+            }
+        });
     }
 
     private void chooseSort() {
@@ -360,6 +386,7 @@ public final class MainActivity extends Activity {
     }
 
     private void requestAutoTest() {
+        if (playCheck != null) return;
         if (AutoTestService.running) {
             toast(getString(R.string.sequence_already_running));
             return;
@@ -392,7 +419,52 @@ public final class MainActivity extends Activity {
             toast(getString(R.string.add_apps_first));
             return;
         }
-        startService(new Intent(this, AutoTestService.class).putStringArrayListExtra(AutoTestService.QUEUE, queue));
+        checkGooglePlay(() -> {
+            if (!AutoTestService.running) {
+                startService(new Intent(this, AutoTestService.class).putStringArrayListExtra(AutoTestService.QUEUE, queue));
+            }
+        });
+    }
+
+    private void checkGooglePlay(Runnable launch) {
+        if (playCheck != null) return;
+        int id = ++playCheckId;
+        playCheck = playChecks.submit(() -> {
+            boolean reachable = GooglePlayConnection.isReachable();
+            playCheckEvents.post(() -> finishPlayCheck(id, reachable, launch));
+        });
+        if (playCheckStatus != null) playCheckStatus.setVisibility(View.VISIBLE);
+        playCheckEvents.postDelayed(() -> finishPlayCheck(id, false, launch), GooglePlayConnection.CHECK_TIMEOUT_MS);
+    }
+
+    private void finishPlayCheck(int id, boolean reachable, Runnable launch) {
+        if (playCheck == null || id != playCheckId) return;
+        cancelPlayCheck();
+        if (reachable) {
+            launch.run();
+            return;
+        }
+        playWarning = new AlertDialog.Builder(this)
+                .setTitle(R.string.play_unreachable)
+                .setMessage(R.string.play_retry_message)
+                .setNeutralButton(R.string.play_continue_anyway, (dialog, choice) -> launch.run())
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.play_retry, (dialog, choice) -> checkGooglePlay(launch))
+                .create();
+        playWarning.setOnDismissListener(dialog -> {
+            if (playWarning == dialog) playWarning = null;
+        });
+        playWarning.show();
+        TextView retry = playWarning.getButton(AlertDialog.BUTTON_POSITIVE);
+        retry.setTypeface(retry.getTypeface(), Typeface.BOLD);
+    }
+
+    private void cancelPlayCheck() {
+        if (playCheck == null) return;
+        playCheck.cancel(true);
+        playCheck = null;
+        playCheckEvents.removeCallbacksAndMessages(null);
+        if (playCheckStatus != null) playCheckStatus.setVisibility(View.GONE);
     }
 
     private List<ReportImage.Item> reportItems() {

@@ -16,7 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 final class InstalledApps {
-    record App(String packageName, String name, Drawable icon, long firstInstalled) {}
+    record App(String packageName, String name, Drawable icon, long firstInstalled, String versionName) {}
 
     static List<App> scan(Context context) {
         PackageManager pm = context.getPackageManager();
@@ -47,7 +47,7 @@ final class InstalledApps {
             ApplicationInfo info = installed.applicationInfo;
             if (info == null) return null;
             return new App(packageName, info.loadLabel(pm).toString(), info.loadIcon(pm),
-                    installed.firstInstallTime);
+                    installed.firstInstallTime, installed.versionName);
         } catch (PackageManager.NameNotFoundException ignored) {
             return null;
         }

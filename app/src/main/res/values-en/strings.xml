@@ -48,6 +48,11 @@
     <string name="overlay_failed">Couldn’t show the floating window. Check your system permissions.</string>
     <string name="open_settings">Open Settings</string>
     <string name="add_apps_first">Add apps to the checklist first.</string>
+    <string name="play_checking">Checking Google Play…</string>
+    <string name="play_unreachable">Can’t reach Google Play</string>
+    <string name="play_retry_message">Check your connection and try again.</string>
+    <string name="play_retry">Retry</string>
+    <string name="play_continue_anyway">Continue anyway</string>
     <string name="report_title">Check-in report</string>
     <string name="report_open">Share check-in report</string>
     <string name="report_date">%1$s · Local record</string>

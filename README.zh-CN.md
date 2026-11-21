@@ -18,6 +18,8 @@
 
 应用把测试清单、最近一次启动时间和累计打卡天数保存在本机。14 天进度显示的是本机累计打卡天数。Google Play 封测的加入时长和反馈由 Play Console 另行跟踪。 [Google Play 封测要求](https://support.google.com/googleplay/android-developer/answer/14151465?hl=zh-Hans)
 
+手动打开应用或启动一批测试前，应用会检查能否连接 Google Play。失败时可重试、取消或仍然继续。报告显示导出时每个应用在设备上安装的版本。
+
 有关权限、导出报告和如何清除记录，请参阅[隐私说明](PRIVACY.md#隐私说明)。
 
 ## 截图
