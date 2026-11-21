@@ -42,16 +42,16 @@ public final class MainActivity extends Activity {
     private static final int APP_COLUMNS = 4;
 
     private enum Page {
-        APPS("应用列表"), TESTS("测试清单");
+        APPS(R.string.app_list), TESTS(R.string.test_checklist);
 
-        final String title;
-        Page(String title) { this.title = title; }
+        final int title;
+        Page(int title) { this.title = title; }
     }
 
     private enum Sort {
-        PACKAGE("包名"), REMAINING("剩余天数"), TODAY("今日未打开");
-        final String title;
-        Sort(String title) { this.title = title; }
+        PACKAGE(R.string.sort_package), REMAINING(R.string.sort_remaining), TODAY(R.string.sort_pending);
+        final int title;
+        Sort(int title) { this.title = title; }
     }
 
     private final ExecutorService reports = Executors.newSingleThreadExecutor();
@@ -113,9 +113,14 @@ public final class MainActivity extends Activity {
             getWindow().setNavigationBarContrastEnforced(false);
         } else {
             getWindow().setStatusBarColor(PAPER);
-            getWindow().setNavigationBarColor(WHITE);
-            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                    | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+            int flags = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            if (Build.VERSION.SDK_INT >= 26) {
+                getWindow().setNavigationBarColor(WHITE);
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            } else {
+                getWindow().setNavigationBarColor(DARK);
+            }
+            getWindow().getDecorView().setSystemUiVisibility(flags);
         }
     }
 
@@ -152,7 +157,7 @@ public final class MainActivity extends Activity {
         TextView brand = text(this, getString(R.string.app_name), 16, INK, true);
         pad(brand, 8, 0, 0, 0);
         header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
-        header.addView(text(this, TestStore.day(System.currentTimeMillis()), 12, MUTED, false));
+        header.addView(text(this, date(this, System.currentTimeMillis()), 12, MUTED, false));
         root.addView(header);
 
         scroll = new ScrollView(this);
@@ -173,7 +178,7 @@ public final class MainActivity extends Activity {
             var actions = column(this);
             actions.setBackgroundColor(WHITE);
             pad(actions, 14, 7, 14, 2);
-            TextView report = button(this, "分享测试报告", true);
+            TextView report = button(this, getString(R.string.report_open), true);
             report.setEnabled(reportAvailable);
             if (!reportAvailable) report.setAlpha(0.48f);
             report.setOnClickListener(view -> createReport());
@@ -186,7 +191,7 @@ public final class MainActivity extends Activity {
         pad(navigation, 8, 6, 8, 6);
         for (Page target : Page.values()) {
             boolean active = target == page;
-            TextView tab = button(this, target.title, active ? PALE : WHITE, active ? GREEN : MUTED);
+            TextView tab = button(this, getString(target.title), active ? PALE : WHITE, active ? GREEN : MUTED);
             tab.setSelected(active);
             tab.setOnClickListener(view -> navigate(target));
             var params = new LinearLayout.LayoutParams(0, -2, 1);
@@ -201,16 +206,16 @@ public final class MainActivity extends Activity {
         Set<String> managed = store.entries().stream().map(TestStore.Entry::packageName)
                 .collect(Collectors.toSet());
         managed.retainAll(catalog.stream().map(InstalledApps.App::packageName).collect(Collectors.toSet()));
-        body.addView(text(this, "应用列表", 25, INK, true));
+        body.addView(text(this, getString(R.string.app_list), 25, INK, true));
         var counts = row(this);
-        counts.addView(text(this, "已安装 " + catalog.size() + " 个", 12, MUTED, false));
-        TextView selectedCount = text(this, "已加测 " + managed.size() + " 个", 12, GREEN, true);
+        counts.addView(text(this, getString(R.string.installed_count, catalog.size()), 12, MUTED, false));
+        TextView selectedCount = text(this, getString(R.string.selected_count, managed.size()), 12, GREEN, true);
         pad(selectedCount, 10, 0, 0, 0);
         selectedCount.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         counts.addView(selectedCount);
         append(body, counts, 3);
         if (catalog.isEmpty()) {
-            empty(body, "暂未找到可打开的应用。");
+            empty(body, getString(R.string.no_launchable_apps));
             return;
         }
 
@@ -246,7 +251,7 @@ public final class MainActivity extends Activity {
                 if (selected) managed.add(packageName);
                 else managed.remove(packageName);
                 showSelection(card, check, selected);
-                selectedCount.setText("已加测 " + managed.size() + " 个");
+                selectedCount.setText(getString(R.string.selected_count, managed.size()));
             });
             tiles.add(card);
         }
@@ -264,10 +269,11 @@ public final class MainActivity extends Activity {
     private boolean renderTests(LinearLayout body) {
         List<TestStore.Entry> tests = currentTests();
         long now = System.currentTimeMillis();
-        pageHeading(body, "测试清单", tests.size() + " 个在测");
+        pageHeading(body, getString(R.string.test_checklist),
+                getResources().getQuantityString(R.plurals.tracked_count, tests.size(), tests.size()));
 
         if (tests.isEmpty()) {
-            empty(body, "在应用列表里点选要测试的应用。");
+            empty(body, getString(R.string.empty_checklist));
             return false;
         }
 
@@ -276,14 +282,15 @@ public final class MainActivity extends Activity {
         pad(toolbar, 10, 6, 8, 6);
         var tally = column(this);
         long opened = tests.stream().filter(entry -> entry.openedOn(now)).count();
-        tally.addView(text(this, "今日已打开", 11, MUTED, false));
-        tally.addView(text(this, opened + " / " + tests.size(), 19, INK, true));
+        tally.addView(text(this, getString(R.string.checked_in_today), 11, MUTED, false));
+        tally.addView(text(this, getString(R.string.check_in_count, opened, tests.size()), 19, INK, true));
         toolbar.addView(tally, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView sortButton = button(this, "排序", WHITE, GREEN);
-        sortButton.setContentDescription("排序：" + sort.title);
+        TextView sortButton = button(this, getString(R.string.sort), WHITE, GREEN);
+        sortButton.setContentDescription(getString(R.string.sort_description, getString(sort.title)));
         sortButton.setOnClickListener(view -> chooseSort());
         toolbar.addView(sortButton);
-        addAction(toolbar, AutoTestService.running ? "运行中" : "自动测试", true, this::requestAutoTest);
+        int sequenceLabel = AutoTestService.running ? R.string.sequence_running : R.string.open_in_order;
+        addAction(toolbar, getString(sequenceLabel), true, this::requestAutoTest);
         append(body, toolbar, 10);
         renderTestGrid(body, tests, now);
         return true;
@@ -325,24 +332,28 @@ public final class MainActivity extends Activity {
     }
 
     private void openTest(InstalledApps.App app) {
-        if (!InstalledApps.openAndRecord(this, app.packageName())) toast("无法打开 " + app.name());
+        if (!InstalledApps.openAndRecord(this, app.packageName())) {
+            toast(getString(R.string.open_app_failed, app.name()));
+        }
     }
 
     private void chooseSort() {
-        String[] choices = {Sort.PACKAGE.title, Sort.REMAINING.title, Sort.TODAY.title};
-        new AlertDialog.Builder(this).setTitle("测试清单排序")
+        Sort[] options = Sort.values();
+        String[] choices = new String[options.length];
+        for (int i = 0; i < options.length; i++) choices[i] = getString(options[i].title);
+        new AlertDialog.Builder(this).setTitle(R.string.sort_checklist)
                 .setSingleChoiceItems(choices, sort.ordinal(), (dialog, selection) -> {
-                    sort = Sort.values()[selection];
+                    sort = options[selection];
                     dialog.dismiss();
                     render(false);
-                }).setNegativeButton("取消", null).show();
+                }).setNegativeButton(R.string.cancel, null).show();
     }
 
     private void confirmRemove(InstalledApps.App app) {
-        new AlertDialog.Builder(this).setTitle("移出测试清单？")
-                .setMessage(app.name() + " 的已记录天数会保留。")
-                .setNegativeButton("取消", null)
-                .setPositiveButton("移除", (dialog, selection) -> {
+        new AlertDialog.Builder(this).setTitle(R.string.remove_app_title)
+                .setMessage(getString(R.string.remove_app_message, app.name()))
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.remove_app, (dialog, selection) -> {
                     store.setManaged(app.packageName(), false);
                     render(true);
                 }).show();
@@ -350,17 +361,18 @@ public final class MainActivity extends Activity {
 
     private void requestAutoTest() {
         if (AutoTestService.running) {
-            toast("自动测试正在运行");
+            toast(getString(R.string.sequence_already_running));
             return;
         }
         if (Settings.canDrawOverlays(this)) {
             startAutoTest();
             return;
         }
-        new AlertDialog.Builder(this).setTitle("允许显示悬浮窗")
-                .setMessage("自动测试会依次打开清单里的应用，每个间隔约 15 秒。悬浮窗显示当前进度，可随时停止。")
-                .setNegativeButton("取消", null)
-                .setPositiveButton("前往设置", (dialog, selection) -> {
+        int seconds = AutoTestService.STEP_SECONDS;
+        new AlertDialog.Builder(this).setTitle(R.string.overlay_permission_title)
+                .setMessage(getResources().getQuantityString(R.plurals.overlay_permission_message, seconds, seconds))
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.open_settings, (dialog, selection) -> {
                     try {
                         autoPermissionRequested = true;
                         startActivityForResult(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -377,7 +389,7 @@ public final class MainActivity extends Activity {
         var queue = new ArrayList<String>();
         for (TestStore.Entry entry : currentTests()) queue.add(entry.packageName());
         if (queue.isEmpty()) {
-            toast("请先加测应用");
+            toast(getString(R.string.add_apps_first));
             return;
         }
         startService(new Intent(this, AutoTestService.class).putStringArrayListExtra(AutoTestService.QUEUE, queue));
@@ -423,7 +435,7 @@ public final class MainActivity extends Activity {
         if (exporting) return;
         List<ReportImage.Item> items = reportItems();
         if (items.isEmpty()) {
-            toast("请先加测应用");
+            toast(getString(R.string.add_apps_first));
             return;
         }
         exporting = true;
@@ -453,7 +465,7 @@ public final class MainActivity extends Activity {
             runOnUiThread(() -> {
                 exporting = false;
                 if (isDestroyed() || isFinishing()) return;
-                if (!success) toast("没有生成报告，请重试");
+                if (!success) toast(getString(R.string.report_create_failed));
                 else showReportPreview(filename, previewImage);
             });
         });
@@ -464,17 +476,17 @@ public final class MainActivity extends Activity {
         image.setAdjustViewBounds(true);
         image.setScaleType(ImageView.ScaleType.FIT_CENTER);
         image.setImageBitmap(preview);
-        image.setContentDescription("测试报告图片");
+        image.setContentDescription(getString(R.string.report_image));
         var reportScroll = new ScrollView(this);
         reportScroll.setBackgroundColor(PAPER);
         pad(reportScroll, 10, 8, 10, 8);
         reportScroll.addView(image, new ScrollView.LayoutParams(-1, -2));
         new AlertDialog.Builder(this)
-                .setTitle("测试报告预览")
+                .setTitle(R.string.report_preview)
                 .setView(reportScroll)
-                .setNegativeButton("关闭", null)
-                .setNeutralButton("保存 PNG", (dialog, choice) -> saveReport(filename))
-                .setPositiveButton("分享", (dialog, choice) ->
+                .setNegativeButton(R.string.close, null)
+                .setNeutralButton(R.string.save_png, (dialog, choice) -> saveReport(filename))
+                .setPositiveButton(R.string.share, (dialog, choice) ->
                         shareReport(ReportImage.sharedUri(this, filename)))
                 .show();
     }
@@ -492,8 +504,9 @@ public final class MainActivity extends Activity {
             boolean success = saved;
             runOnUiThread(() -> {
                 if (isDestroyed()) return;
-                if (!success) toast("没有保存报告，请重试");
-                else toast(target == null ? "已保存至相册 · Testing" : "已保存报告");
+                if (!success) toast(getString(R.string.report_save_failed));
+                else toast(target == null ? getString(R.string.report_saved_to_pictures, ReportImage.ALBUM)
+                        : getString(R.string.report_saved));
             });
         });
     }
@@ -502,8 +515,8 @@ public final class MainActivity extends Activity {
         Intent send = new Intent(Intent.ACTION_SEND).setType("image/png")
                 .putExtra(Intent.EXTRA_STREAM, uri)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        send.setClipData(ClipData.newUri(getContentResolver(), "封测进度报告", uri));
-        startActivity(Intent.createChooser(send, "分享报告"));
+        send.setClipData(ClipData.newUri(getContentResolver(), getString(R.string.report_title), uri));
+        startActivity(Intent.createChooser(send, getString(R.string.share_report)));
     }
 
     private void pageHeading(LinearLayout parent, String title, String subtitle) {
@@ -533,13 +546,14 @@ public final class MainActivity extends Activity {
     private LinearLayout progressTile(InstalledApps.App app, TestStore.Entry entry, long now) {
         LinearLayout tile = appTile(app, 11);
         boolean opened = entry.openedOn(now);
-        String status = opened ? "已打开" : "待打开";
+        String status = getString(opened ? R.string.checked_in : R.string.pending_check_in);
         TextView tag = text(this, status, 11, opened ? GREEN : AMBER, true);
         tag.setGravity(Gravity.CENTER);
         tag.setBackground(rounded(this, opened ? PALE : PALE_AMBER, 6));
         pad(tag, 4, 2, 4, 2);
         tile.addView(tag);
-        TextView progress = text(this, entry.progressLabel(), 11, INK, true);
+        String days = getResources().getQuantityString(R.plurals.day_progress, GOAL_DAYS, entry.days(), GOAL_DAYS);
+        TextView progress = text(this, days, 11, INK, true);
         progress.setGravity(Gravity.CENTER);
         append(tile, progress, 3);
         return tile;

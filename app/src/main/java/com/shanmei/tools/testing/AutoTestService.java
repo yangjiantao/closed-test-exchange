@@ -20,7 +20,8 @@ import java.util.ArrayList;
 
 public final class AutoTestService extends Service {
     static final String QUEUE = "packages";
-    static final long STEP_MS = 15_000;
+    static final int STEP_SECONDS = 15;
+    private static final long STEP_MS = STEP_SECONDS * 1000L;
     static boolean running;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -47,7 +48,7 @@ public final class AutoTestService extends Service {
         try {
             showOverlay();
         } catch (RuntimeException exception) {
-            Toast.makeText(this, "无法显示悬浮窗，请检查系统权限", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.overlay_failed, Toast.LENGTH_SHORT).show();
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -67,7 +68,7 @@ public final class AutoTestService extends Service {
         var top = Ui.row(this);
         progressText = Ui.text(this, "", 14, Ui.MINT, true);
         top.addView(progressText, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView stop = Ui.button(this, "停止", false);
+        TextView stop = Ui.button(this, getString(R.string.stop), false);
         stop.setOnClickListener(view -> finish(false));
         top.addView(stop);
         overlay.addView(top);
@@ -102,7 +103,7 @@ public final class AutoTestService extends Service {
         if (InstalledApps.openAndRecord(this, packageName)) {
             opened++;
         } else {
-            appName.append(" · 打开失败");
+            appName.setText(getString(R.string.sequence_app_failed, appName.getText()));
         }
         deadline = SystemClock.uptimeMillis() + STEP_MS;
         updateProgress();
@@ -110,7 +111,7 @@ public final class AutoTestService extends Service {
 
     private void updateProgress() {
         long remaining = Math.max(0, deadline - SystemClock.uptimeMillis());
-        progressText.setText(index + "/" + queue.size() + "  ·  " + ((remaining + 999) / 1000) + " 秒");
+        progressText.setText(getString(R.string.sequence_progress, index, queue.size(), (remaining + 999) / 1000));
         progress.setProgress((int) ((STEP_MS - remaining) * 1000 / STEP_MS));
         if (remaining > 0) {
             handler.postDelayed(this::updateProgress, Math.min(remaining, 200));
@@ -123,8 +124,9 @@ public final class AutoTestService extends Service {
         handler.removeCallbacksAndMessages(null);
         running = false;
         if (complete) {
-            Toast.makeText(this, "自动测试完成 · 已打开 " + opened + "/" + queue.size(),
-                    Toast.LENGTH_SHORT).show();
+            int total = queue.size();
+            String message = getResources().getQuantityString(R.plurals.sequence_complete, total, opened, total);
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
         }
         try {
             startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));

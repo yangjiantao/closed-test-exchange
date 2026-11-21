@@ -5,6 +5,7 @@
 *.iml
 *.jks
 *.keystore
+*.p12
 *.apk
 *.aab
 /design/

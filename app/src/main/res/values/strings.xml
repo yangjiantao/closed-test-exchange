@@ -1,4 +1,64 @@
 <resources>
     <string name="app_name">封测互测</string>
+    <string name="app_list">应用列表</string>
+    <string name="test_checklist">测试清单</string>
+    <string name="installed_count">已安装 %1$d 个</string>
+    <string name="selected_count">已加入 %1$d 个</string>
+    <string name="no_launchable_apps">暂未找到可打开的应用。</string>
+    <plurals name="tracked_count">
+        <item quantity="other">%1$d 个应用</item>
+    </plurals>
+    <string name="empty_checklist">在应用列表中选择要打卡的应用。</string>
+    <string name="checked_in_today">今日已打卡</string>
+    <string name="checked_in">已打卡</string>
+    <string name="pending_check_in">待打卡</string>
+    <string name="check_in_count">%1$d / %2$d</string>
+    <plurals name="day_progress">
+        <item quantity="other">%1$d / %2$d 天</item>
+    </plurals>
+    <string name="sort">排序</string>
+    <string name="sort_description">排序：%1$s</string>
+    <string name="sort_checklist">测试清单排序</string>
+    <string name="sort_package">包名</string>
+    <string name="sort_remaining">剩余天数</string>
+    <string name="sort_pending">未打卡优先</string>
+    <string name="cancel">取消</string>
+    <string name="remove_app_title">移出测试清单？</string>
+    <string name="remove_app_message">%1$s 的打卡记录会保留。</string>
+    <string name="remove_app">移除</string>
+    <string name="open_app_failed">无法打开 %1$s</string>
+    <string name="open_in_order">依次打开</string>
+    <string name="sequence_running">运行中</string>
+    <string name="sequence_already_running">正在依次打开应用</string>
+    <plurals name="sequence_complete">
+        <item quantity="other">已打开 %1$d / %2$d 个应用</item>
+    </plurals>
+    <string name="sequence_app_failed">%1$s · 打开失败</string>
+    <string name="stop">停止</string>
+    <string name="sequence_progress">%1$d / %2$d · %3$d 秒</string>
+    <string name="overlay_permission_title">允许显示悬浮窗</string>
+    <plurals name="overlay_permission_message">
+        <item quantity="other">应用会每隔约 %1$d 秒打开清单中的下一个应用。悬浮窗显示进度，可随时停止。</item>
+    </plurals>
     <string name="overlay_permission_required">请在系统设置中允许%1$s显示悬浮窗</string>
+    <string name="overlay_failed">无法显示悬浮窗，请检查系统权限</string>
+    <string name="open_settings">前往设置</string>
+    <string name="add_apps_first">请先向清单添加应用</string>
+    <string name="report_title">打卡报告</string>
+    <string name="report_open">分享打卡报告</string>
+    <string name="report_date">%1$s · 本机记录</string>
+    <string name="report_pending">待打卡 %1$d 个</string>
+    <plurals name="report_days">
+        <item quantity="other">累计 %1$d 天</item>
+    </plurals>
+    <string name="report_preview">打卡报告预览</string>
+    <string name="report_image">打卡报告图片</string>
+    <string name="report_create_failed">未能生成报告，请重试</string>
+    <string name="report_save_failed">未能保存报告，请重试</string>
+    <string name="report_saved">已保存报告</string>
+    <string name="report_saved_to_pictures">已保存至相册 · %1$s</string>
+    <string name="save_png">保存 PNG</string>
+    <string name="share">分享</string>
+    <string name="share_report">分享报告</string>
+    <string name="close">关闭</string>
 </resources>

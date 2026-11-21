@@ -27,10 +27,11 @@ import java.util.List;
 import java.util.Locale;
 
 final class ReportImage {
+    static final String ALBUM = "Testing";
     private static final int WIDTH = 1080;
     private static final int MARGIN = 42;
     private static final int GAP = 20;
-    private static final int GRID_TOP = 396;
+    private static final int GRID_TOP = 360;
     private static final int TILE_HEIGHT = 254;
 
     record Item(InstalledApps.App app, TestStore.Entry entry) {}
@@ -82,7 +83,7 @@ final class ReportImage {
         var values = new ContentValues();
         values.put(MediaStore.Images.Media.DISPLAY_NAME, name);
         values.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
-        values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Testing");
+        values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/" + ALBUM);
         values.put(MediaStore.Images.Media.IS_PENDING, 1);
         Uri imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
         if (imageUri == null) throw new IOException("Cannot create media entry");
@@ -116,13 +117,13 @@ final class ReportImage {
         var canvas = new Canvas(image);
         var paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         canvas.drawColor(Ui.PAPER);
-        drawHeader(context, canvas, paint, TestStore.day(now), Summary.from(items, now));
+        drawHeader(context, canvas, paint, Ui.date(context, now), Summary.from(items, now));
 
         int tileWidth = (WIDTH - 2 * MARGIN - (columns - 1) * GAP) / columns;
         for (int i = 0; i < items.size(); i++) {
             int x = MARGIN + (i % columns) * (tileWidth + GAP);
             int y = GRID_TOP + (i / columns) * (TILE_HEIGHT + GAP);
-            drawItem(canvas, paint, items.get(i), now, x, y, tileWidth);
+            drawItem(context, canvas, paint, items.get(i), now, x, y, tileWidth);
         }
         return image;
     }
@@ -130,18 +131,26 @@ final class ReportImage {
     private static void drawHeader(Context context, Canvas canvas, TextPaint paint, String date, Summary summary) {
         drawIcon(canvas, context.getDrawable(R.drawable.app_icon), MARGIN, 36, 58);
         draw(canvas, paint, context.getString(R.string.app_name), 118, 77, 34, Ui.INK, true);
-        draw(canvas, paint, "测试报告", MARGIN, 167, 68, Ui.INK, true);
-        draw(canvas, paint, date + " · 本机记录", MARGIN, 221, 34, Ui.MUTED, false);
-
-        fill(canvas, paint, MARGIN, 252, WIDTH - MARGIN, 370, 28, Ui.DARK);
-        draw(canvas, paint, "今日已打开", 68, 289, 28, Ui.WHITE, false);
-        draw(canvas, paint, summary.opened() + " / " + summary.total(), 68, 344, 55, Ui.MINT, true);
+        int dateWidth = 450;
+        int titleWidth = WIDTH - 2 * MARGIN - dateWidth - GAP;
+        draw(canvas, paint, context.getString(R.string.report_title), MARGIN, 167, 68, Ui.INK, true, titleWidth);
         paint.setTextAlign(Paint.Align.RIGHT);
-        draw(canvas, paint, "待打开 " + summary.pending() + " 个", WIDTH - 70, 320, 33, Ui.WHITE, false);
+        draw(canvas, paint, context.getString(R.string.report_date, date), WIDTH - MARGIN, 167,
+                42, Ui.MUTED, false, dateWidth);
+        paint.setTextAlign(Paint.Align.LEFT);
+
+        fill(canvas, paint, MARGIN, 216, WIDTH - MARGIN, 334, 28, Ui.DARK);
+        draw(canvas, paint, context.getString(R.string.checked_in_today), 68, 253, 28, Ui.WHITE, false);
+        draw(canvas, paint, context.getString(R.string.check_in_count, summary.opened(), summary.total()),
+                68, 308, 55, Ui.MINT, true);
+        paint.setTextAlign(Paint.Align.RIGHT);
+        draw(canvas, paint, context.getString(R.string.report_pending, summary.pending()),
+                WIDTH - 70, 284, 33, Ui.WHITE, false);
         paint.setTextAlign(Paint.Align.LEFT);
     }
 
-    private static void drawItem(Canvas canvas, TextPaint paint, Item item, long now, int x, int y, int width) {
+    private static void drawItem(Context context, Canvas canvas, TextPaint paint, Item item, long now,
+                                 int x, int y, int width) {
         int center = x + width / 2;
         fill(canvas, paint, x, y, x + width, y + TILE_HEIGHT, 26, Ui.WHITE);
         drawIcon(canvas, item.app().icon(), center - 35, y + 19, 70);
@@ -149,12 +158,14 @@ final class ReportImage {
 
         boolean opened = item.entry().openedOn(now);
         int color = opened ? Ui.GREEN : Ui.AMBER;
-        String status = item.entry().todayStatus(now);
+        String status = context.getString(opened ? R.string.checked_in : R.string.pending_check_in);
         fill(canvas, paint, center - 91, y + 173, center + 91, y + 212, 10,
                 opened ? Ui.PALE : Ui.PALE_AMBER);
         paint.setTextAlign(Paint.Align.CENTER);
-        draw(canvas, paint, status, center, y + 202, 29, color, true);
-        draw(canvas, paint, "累计 " + item.entry().days() + " 天", center, y + 240, 30, Ui.GREEN, true);
+        draw(canvas, paint, status, center, y + 202, 29, color, true, 162);
+        int days = item.entry().days();
+        String total = context.getResources().getQuantityString(R.plurals.report_days, days, days);
+        draw(canvas, paint, total, center, y + 240, 30, Ui.GREEN, true, width - 26);
         paint.setTextAlign(Paint.Align.LEFT);
     }
 
@@ -191,9 +202,16 @@ final class ReportImage {
 
     private static void draw(Canvas canvas, TextPaint paint, String value, int x, int y, int size,
                              int color, boolean bold) {
+        draw(canvas, paint, value, x, y, size, color, bold, WIDTH);
+    }
+
+    private static void draw(Canvas canvas, TextPaint paint, String value, int x, int y, int size,
+                             int color, boolean bold, int maxWidth) {
         paint.setColor(color);
         paint.setTypeface(bold ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
         paint.setTextSize(size);
+        float width = paint.measureText(value);
+        if (width > maxWidth) paint.setTextSize(size * maxWidth / width);
         canvas.drawText(value, x, y, paint);
     }
 

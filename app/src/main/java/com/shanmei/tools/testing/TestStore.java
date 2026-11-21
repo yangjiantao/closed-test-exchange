@@ -19,25 +19,17 @@ final class TestStore extends SQLiteOpenHelper {
         boolean openedOn(long date) {
             return lastOpened > 0 && day(lastOpened).equals(day(date));
         }
-
-        String progressLabel() {
-            return days + " / " + GOAL_DAYS + " 天";
-        }
-
-        String todayStatus(long date) {
-            return openedOn(date) ? "今日已打开" : "今日待打开";
-        }
     }
 
     private static TestStore instance;
 
     static synchronized TestStore get(Context context) {
-        if (instance == null) instance = new TestStore(context.getApplicationContext());
+        if (instance == null) instance = new TestStore(context.getApplicationContext(), "app_data.db");
         return instance;
     }
 
-    private TestStore(Context context) {
-        super(context, "app_data.db", null, 2);
+    TestStore(Context context, String databaseName) {
+        super(context, databaseName, null, 2);
     }
 
     @Override
@@ -113,7 +105,7 @@ final class TestStore extends SQLiteOpenHelper {
         return new Entry(rows.getString(0), rows.getInt(1), rows.getLong(2));
     }
 
-    static String day(long timestamp) {
+    private static String day(long timestamp) {
         return new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date(timestamp));
     }
 }

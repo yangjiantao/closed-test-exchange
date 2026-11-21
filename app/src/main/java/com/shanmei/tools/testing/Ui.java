@@ -5,11 +5,14 @@ import android.content.res.ColorStateList;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
+import android.text.format.DateFormat;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+
+import java.util.Date;
 
 final class Ui {
     static final int PAPER = 0xfff4f6f1;
@@ -26,6 +29,10 @@ final class Ui {
 
     static int dp(Context context, float value) {
         return Math.round(value * context.getResources().getDisplayMetrics().density);
+    }
+
+    static String date(Context context, long time) {
+        return DateFormat.getMediumDateFormat(context).format(new Date(time));
     }
 
     static void pad(View view, int left, int top, int right, int bottom) {
